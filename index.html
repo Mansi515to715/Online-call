@@ -3,241 +3,241 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Video Call - No Login Required</title>
+    <title>Live Video Call</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
-        /* --- CSS STYLING --- */
         :root {
-            --primary-color: #007bff;
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-color: #ffffff;
-            --danger-color: #dc3545;
+            --primary: #0d6efd;
+            --dark: #121212;
+            --card: #1e1e1e;
+            --text: #fff;
         }
-
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            font-family: sans-serif;
+            background: var(--dark);
+            color: var(--text);
+            margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            margin: 0;
             overflow: hidden;
         }
-
         .container {
-            background-color: var(--card-bg);
+            background: var(--card);
             padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border-radius: 10px;
+            width: 320px;
             text-align: center;
-            width: 350px;
-            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
         }
-
-        h2 { margin-bottom: 1.5rem; }
-
         input {
             width: 100%;
             padding: 10px;
             margin: 10px 0;
-            border: 1px solid #444;
-            border-radius: 5px;
-            background: #2b2b2b;
+            background: #333;
+            border: 1px solid #555;
             color: white;
+            border-radius: 5px;
             box-sizing: border-box;
         }
-
         button {
             width: 100%;
             padding: 10px;
-            border: none;
-            border-radius: 5px;
-            background-color: var(--primary-color);
+            margin-top: 5px;
+            background: var(--primary);
             color: white;
-            font-size: 16px;
+            border: none;
             cursor: pointer;
-            margin-top: 10px;
+            border-radius: 5px;
+            font-size: 16px;
         }
-
         button:hover { opacity: 0.9; }
+        .hidden { display: none !important; }
         
-        .btn-danger { background-color: var(--danger-color); }
-        .btn-link { background: none; color: #888; margin-top: 15px; font-size: 12px; }
-
-        /* Hide sections by default */
-        .hidden { display: none; }
-
-        /* Video Screen UI */
-        #video-screen {
-            width: 90%;
-            height: 90vh;
-            display: none; /* Hidden initially */
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .video-placeholder {
-            width: 100%;
-            height: 80%;
-            background-color: #333;
-            border-radius: 10px;
+        /* Video Area */
+        #video-section {
             display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100vh;
             align-items: center;
             justify-content: center;
             position: relative;
         }
-        
-        .controls {
-            margin-top: 20px;
-            display: flex;
-            gap: 15px;
+        video {
+            width: 100%;
+            max-width: 600px;
+            background: #000;
+            border-radius: 10px;
+            margin: 10px;
+            transform: scaleX(-1); /* Mirror effect */
         }
-
-        .control-btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
+        .small-video {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 120px;
+            border: 2px solid white;
+            z-index: 10;
         }
-
-        .status-msg {
-            color: #ffc107;
-            font-size: 0.9rem;
-            margin-top: 10px;
-        }
+        .status { color: yellow; font-size: 14px; margin-top: 10px; }
+        .btn-red { background: #dc3545; margin-top: 20px; width: 200px; }
+        .link { background: none; color: #aaa; font-size: 12px; margin-top: 15px; }
     </style>
 </head>
 <body>
 
-    <div class="container" id="user-login-panel">
-        <h2>🔒 Video Room</h2>
-        <p>बिना अकाउंट के कॉल ज्वाइन करें</p>
-        <input type="password" id="user-pass-input" placeholder="Room Password दर्ज करें">
-        <button onclick="joinCall()">Join Call</button>
-        <p id="user-error" class="status-msg" style="color: red; display:none;">गलत पासवर्ड!</p>
+    <div class="container" id="login-ui">
+        <h2>🔒 Secure Call</h2>
+        <input type="password" id="room-pass" placeholder="Enter Room Password">
+        <button onclick="checkPass()">Enter Room</button>
+        <p class="status" id="login-msg"></p>
+        <button class="link" onclick="toggleAdmin()">Admin Panel</button>
+    </div>
+
+    <div class="container hidden" id="mode-ui">
+        <h2>📞 Connect</h2>
+        <p>क्या आप रूम बना रहे हैं या जुड़ रहे हैं?</p>
+        <button onclick="startCall('host')">Create Room (Host)</button>
+        <button onclick="startCall('join')" style="background: #28a745;">Join Room (Guest)</button>
+        <p class="status" id="connect-status">Waiting...</p>
+    </div>
+
+    <div class="container hidden" id="admin-ui">
+        <h2>🛡️ Admin</h2>
+        <input type="password" id="admin-pass" placeholder="Admin Password (XYZABC)">
+        <button onclick="adminAction()">Login</button>
+        <div id="admin-controls" class="hidden">
+            <hr>
+            <p>Current User Pass: <b id="show-pass"></b></p>
+            <input type="text" id="new-pass" placeholder="Set New Password">
+            <button onclick="saveNewPass()">Update</button>
+        </div>
+        <button class="link" onclick="location.reload()">Back</button>
+    </div>
+
+    <div id="video-section" class="hidden">
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" class="small-video" autoplay muted playsinline></video>
         
-        <button class="btn-link" onclick="showAdminLogin()">Admin Access</button>
-    </div>
-
-    <div class="container hidden" id="admin-login-panel">
-        <h2>🛡️ Admin Login</h2>
-        <input type="password" id="admin-pass-input" placeholder="Admin Password">
-        <button onclick="adminLogin()">Login</button>
-        <button class="btn-link" onclick="showUserLogin()">Back to Home</button>
-        <p id="admin-error" class="status-msg" style="color: red; display:none;">एक्सेस डिनाइड!</p>
-    </div>
-
-    <div class="container hidden" id="admin-dashboard">
-        <h2>⚙️ Settings</h2>
-        <p>Current User Password: <strong id="display-current-pass">...</strong></p>
-        <hr style="border-color: #444;">
-        <p>नया पासवर्ड सेट करें:</p>
-        <input type="text" id="new-room-pass" placeholder="New User Password">
-        <button onclick="updateUserPassword()">Update Password</button>
-        <p id="update-msg" class="status-msg" style="color: lime; display:none;">पासवर्ड बदल दिया गया!</p>
-        <button class="btn-danger" style="margin-top: 20px;" onclick="logoutAdmin()">Logout</button>
-    </div>
-
-    <div id="video-screen">
-        <div class="video-placeholder">
-            [ Video Stream Area ]
-            <br>
-            <span id="user-status">Connecting...</span>
-        </div>
-        <div class="controls">
-            <button class="control-btn">🎤</button>
-            <button class="control-btn">📷</button>
-            <button class="control-btn btn-danger" onclick="leaveCall()">📞</button>
-        </div>
+        <p id="call-status" style="position: absolute; top: 20px; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px;">Connecting...</p>
+        <button class="btn-red" onclick="location.reload()">End Call</button>
     </div>
 
     <script>
-        // --- JAVASCRIPT LOGIC ---
+        // CONFIG
+        const ADMIN_PASS = "XYZABC";
+        if(!localStorage.getItem('appPass')) localStorage.setItem('appPass', '12345');
 
-        // 1. Configuration
-        const ADMIN_MASTER_PASS = "XYZABC"; // फिक्स एडमिन पासवर्ड
-        
-        // चेक करें कि लोकल स्टोरेज में पासवर्ड है या नहीं, नहीं तो डिफ़ॉल्ट '12345' सेट करें
-        if (!localStorage.getItem('roomPassword')) {
-            localStorage.setItem('roomPassword', '12345');
-        }
+        let peer = null;
+        let localStream = null;
 
-        // 2. DOM Elements
-        const userPanel = document.getElementById('user-login-panel');
-        const adminLoginPanel = document.getElementById('admin-login-panel');
-        const adminDashboard = document.getElementById('admin-dashboard');
-        const videoScreen = document.getElementById('video-screen');
-
-        // --- USER FUNCTIONS ---
-
-        function joinCall() {
-            const input = document.getElementById('user-pass-input').value;
-            const currentPass = localStorage.getItem('roomPassword');
-
-            if (input === currentPass) {
-                // UI स्विच करें
-                userPanel.classList.add('hidden');
-                videoScreen.style.display = 'flex';
-                document.body.style.backgroundColor = '#000'; // वीडियो मोड में डार्क बैकग्राउंड
-                document.getElementById('user-status').innerText = "Connected Securely";
+        // --- AUTH LOGIC ---
+        function checkPass() {
+            const input = document.getElementById('room-pass').value;
+            if(input === localStorage.getItem('appPass')) {
+                document.getElementById('login-ui').classList.add('hidden');
+                document.getElementById('mode-ui').classList.remove('hidden');
             } else {
-                document.getElementById('user-error').style.display = 'block';
+                document.getElementById('login-msg').innerText = "Wrong Password!";
             }
         }
 
-        function leaveCall() {
-            location.reload(); // पेज रिफ्रेश कर दें
+        // --- ADMIN LOGIC ---
+        function toggleAdmin() {
+            document.getElementById('login-ui').classList.add('hidden');
+            document.getElementById('admin-ui').classList.remove('hidden');
         }
 
-        // --- ADMIN FUNCTIONS ---
-
-        function showAdminLogin() {
-            userPanel.classList.add('hidden');
-            adminLoginPanel.classList.remove('hidden');
-        }
-
-        function showUserLogin() {
-            adminLoginPanel.classList.add('hidden');
-            userPanel.classList.remove('hidden');
-        }
-
-        function adminLogin() {
-            const input = document.getElementById('admin-pass-input').value;
-
-            if (input === ADMIN_MASTER_PASS) {
-                adminLoginPanel.classList.add('hidden');
-                adminDashboard.classList.remove('hidden');
-                // डैशबोर्ड पर करंट पासवर्ड दिखाएं
-                document.getElementById('display-current-pass').innerText = localStorage.getItem('roomPassword');
+        function adminAction() {
+            if(document.getElementById('admin-pass').value === ADMIN_PASS) {
+                document.getElementById('admin-controls').classList.remove('hidden');
+                document.getElementById('show-pass').innerText = localStorage.getItem('appPass');
             } else {
-                document.getElementById('admin-error').style.display = 'block';
+                alert("Wrong Admin Password!");
             }
         }
 
-        function updateUserPassword() {
-            const newPass = document.getElementById('new-room-pass').value;
-            if (newPass) {
-                localStorage.setItem('roomPassword', newPass);
-                document.getElementById('display-current-pass').innerText = newPass;
-                
-                const msg = document.getElementById('update-msg');
-                msg.style.display = 'block';
-                setTimeout(() => msg.style.display = 'none', 3000);
-            } else {
-                alert("कृपया कुछ लिखें!");
-            }
-        }
-
-        function logoutAdmin() {
+        function saveNewPass() {
+            localStorage.setItem('appPass', document.getElementById('new-pass').value);
+            alert("Password Updated!");
             location.reload();
         }
 
+        // --- VIDEO & PEERJS LOGIC ---
+        
+        function startCall(mode) {
+            document.getElementById('mode-ui').classList.add('hidden');
+            document.getElementById('video-section').classList.remove('hidden');
+            document.getElementById('call-status').innerText = "Starting Camera...";
+
+            // 1. Get Camera Access
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+                localStream = stream;
+                document.getElementById('local-video').srcObject = stream;
+                initPeer(mode);
+            })
+            .catch(err => {
+                alert("Camera access denied! " + err);
+                location.reload();
+            });
+        }
+
+        function initPeer(mode) {
+            // हम 'Room Password' को ही एक Unique ID बनाने के लिए इस्तेमाल करेंगे
+            // ताकि दोनों डिवाइस एक दूसरे को ढूंढ सकें।
+            const roomCode = localStorage.getItem('appPass'); 
+            
+            // Unique IDs बना रहे हैं ताकि PeerJS उन्हें पहचान सके
+            // Host ID: roompass_host
+            // Join ID: roompass_host (को कॉल करेगा)
+            
+            const hostID = `secure-video-${roomCode}-host`;
+
+            if (mode === 'host') {
+                document.getElementById('call-status').innerText = "Waiting for other person...";
+                
+                // HOST अपना ID सेट करता है
+                peer = new Peer(hostID);
+                
+                peer.on('open', (id) => {
+                    console.log("My ID: " + id);
+                });
+
+                // जब कोई कॉल करे (Answer Call)
+                peer.on('call', (call) => {
+                    call.answer(localStream); // अपनी वीडियो भेजो
+                    call.on('stream', (remoteStream) => {
+                        document.getElementById('remote-video').srcObject = remoteStream;
+                        document.getElementById('call-status').innerText = "Connected!";
+                    });
+                });
+
+            } else {
+                // JOINER (Guest)
+                document.getElementById('call-status').innerText = "Connecting to Host...";
+                
+                // Guest को रैंडम ID मिलती है
+                peer = new Peer(); 
+
+                peer.on('open', (id) => {
+                    // Host को कॉल लगाओ
+                    const conn = peer.call(hostID, localStream);
+                    
+                    conn.on('stream', (remoteStream) => {
+                        document.getElementById('remote-video').srcObject = remoteStream;
+                        document.getElementById('call-status').innerText = "Connected!";
+                    });
+
+                    // अगर Host ऑनलाइन नहीं है तो Error handle करें
+                    peer.on('error', (err) => {
+                        document.getElementById('call-status').innerText = "Host not found. Ask them to join first!";
+                    });
+                });
+            }
+        }
     </script>
 </body>
 </html>
